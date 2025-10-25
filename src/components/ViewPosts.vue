@@ -7,11 +7,12 @@ export default {
     data() {
         return {
             moods: ["Happy", "Sad", "Angry"],
-            posts: [], // array of post objects
+            posts: [], 
             entry: "",
             mood: "",
             showEditPost: false,
             editPostId: "",
+            id: "",
         }
     },
     computed: {
@@ -24,27 +25,46 @@ export default {
             }
         }
     },
-    created() { // created is a hook that executes as soon as Vue instance is created
+    created() { 
         axios.get(`${this.baseUrl}/posts`)
             .then(response => {
-                // this gets the data, which is an array, and pass the data to Vue instance's posts property
                 this.posts = response.data
+                console.log(this.posts)
             })
             .catch(error => {
                 this.posts = [{ entry: 'There was an error: ' + error.message }]
             })
     },
     methods: {
-        editPost(id) {
-            
+        editPost(index, postIndex) {
+            this.entry = this.posts[index]['entry'];
+            this.mood = this.posts[index]['mood'];
+            this.id = postIndex;
+            this.showEditPost = true;
         },
-        updatePost(event) {
-            
+        updatePost() {
+            const params = {
+                    entry: this.entry,
+                    mood: this.mood,
+            }
+            axios.post(`${this.baseUrl}/updatePost?id=${this.id}`, params)
+            .then(()=>{
+                axios.get(`${this.baseUrl}/posts`)
+                .then(response2=>{
+                    this.posts = response2.data;
+                    this.showEditPost = false;
+                    this.entry = '';
+                    this.mood='';
+                    this.id='';
+                })
+                .catch(error=>{
+                    console.log(error);
+                })
+            })
         }
     }
 }
 </script>
-
 <template>
     <div id="demo">
         <h2> View Blog Posts </h2>
@@ -57,20 +77,19 @@ export default {
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="post in posts">
+                <tr v-for="(post, index) in posts" :key="post.id">
                     <td>{{ post.id }}</td>
                     <td>{{ post.entry }}</td>
                     <td>{{ post.mood }}</td>
-                    <td><button>Edit</button></td>
+                    <td><button @click="editPost(index, post.id)">Edit</button></td>
                 </tr>
             </tbody>
-
         </table>
         <!-- TODO Show form for editing post only when edit button is clicked -->
         <div id="editPost" v-if="showEditPost">
             <h3>Edit Post</h3>
             <div id="postContent" class="mx-3">
-                <form>
+                <form @submit.prevent="updatePost">
                     <div class="mb-3">
                         <label for="entry" class="form-label">Entry</label>
                         <textarea id="entry" class="form-control" v-model="entry" required></textarea>
@@ -88,5 +107,4 @@ export default {
         </div>
     </div>
 </template>
-
 <style scoped></style>
